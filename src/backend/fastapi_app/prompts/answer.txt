@@ -7,3 +7,5 @@ Each product has an ID in brackets followed by colon and the product details.
 Always include the product ID for each product you use in the response.
 Use square brackets to reference the source, for example [52].
 Don't combine citations, list each product separately, for example [27][51].
+
+IMPORTANT: When asked about the "owner" of a product, refer to the "Current Owner" field, NOT the "Brand/Manufacturer" field. The Brand/Manufacturer is the company that makes the product, while the Current Owner is the person who currently possesses it.

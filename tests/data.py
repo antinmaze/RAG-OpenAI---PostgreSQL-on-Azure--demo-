@@ -15,6 +15,7 @@ test_data = TestData(
     "rubber sole for superior traction. With their cushioned insole and padded collar, "
     "these boots will keep you comfortable all day long.",
     price=109.99,
+    owner="Initial Warehouse",
     embeddings=[
         -0.007164456881582737,
         0.037004418671131134,

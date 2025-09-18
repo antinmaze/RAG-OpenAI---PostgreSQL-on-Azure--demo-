@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 from typing import Union
 
 import fastapi
+import numpy as np
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from openai import APIError
@@ -12,12 +13,15 @@ from sqlalchemy import select, text
 from fastapi_app.api_models import (
     ChatRequest,
     ErrorResponse,
+    ItemCreate,
     ItemPublic,
     ItemWithDistance,
     RetrievalResponse,
     RetrievalResponseDelta,
+    ItemUpdate,
 )
 from fastapi_app.dependencies import ChatClient, CommonDeps, DBSession, EmbeddingsClient
+from fastapi_app.embeddings import compute_text_embedding
 from fastapi_app.postgres_models import Item
 from fastapi_app.postgres_searcher import PostgresSearcher
 from fastapi_app.rag_advanced import AdvancedRAGChat
@@ -53,6 +57,81 @@ async def item_handler(database_session: DBSession, id: int) -> ItemPublic:
     return ItemPublic.model_validate(item.to_dict())
 
 
+@router.post("/items", response_model=ItemPublic)
+async def create_item_handler(
+    database_session: DBSession, openai_embed: EmbeddingsClient, item_data: ItemCreate
+) -> ItemPublic:
+    """Create a new item with embeddings."""
+    # Create new item
+    new_item = Item(
+        type=item_data.type,
+        brand=item_data.brand,
+        name=item_data.name,
+        description=item_data.description,
+        price=item_data.price,
+        owner=item_data.owner,
+    )
+
+    # Add to database first to get the ID
+    database_session.add(new_item)
+    await database_session.commit()
+    await database_session.refresh(new_item)
+
+    try:
+        # Create formatted text for embeddings (same format as in recreate_all_embeddings.py)
+        text_for_embedding = (
+            f"Product: {new_item.name}. "
+            f"Type: {new_item.type}. "
+            f"Brand/Manufacturer: {new_item.brand}. "
+            f"Description: {new_item.description} "
+            f"Price: ${new_item.price:.2f}. "
+            f"Current Owner: {new_item.owner}."
+        )
+
+        # Generate embeddings
+        embedding_3l = await compute_text_embedding(
+            text_for_embedding,
+            openai_embed.client,
+            embed_model="text-embedding-3-large",
+            embed_deployment=None,
+            embedding_dimensions=1024,
+        )
+
+        embedding_nomic = await compute_text_embedding(
+            text_for_embedding,
+            openai_embed.client,
+            embed_model="text-embedding-3-small",
+            embed_deployment=None,
+            embedding_dimensions=1536,
+        )
+
+        # Convert to PostgreSQL format
+        embedding_3l_array = np.array(embedding_3l, dtype=np.float32)
+        embedding_nomic_array = np.array(embedding_nomic, dtype=np.float32)
+
+        # Update the item with embeddings
+        await database_session.execute(
+            text("""
+                UPDATE items
+                SET embedding_3l = :embedding_3l,
+                    embedding_nomic = :embedding_nomic
+                WHERE id = :item_id
+            """),
+            {
+                "embedding_3l": embedding_3l_array.tolist(),
+                "embedding_nomic": embedding_nomic_array.tolist(),
+                "item_id": new_item.id,
+            },
+        )
+        await database_session.commit()
+
+    except Exception as e:
+        logging.warning(f"Failed to generate embeddings for item {new_item.id}: {e}")
+        # Item is still created, just without embeddings
+
+    return ItemPublic.model_validate(new_item.to_dict())
+
+
 @router.get("/similar", response_model=list[ItemWithDistance])
 async def similar_handler(
     context: CommonDeps, database_session: DBSession, id: int, n: int = 5
@@ -74,6 +153,80 @@ async def similar_handler(
 
     items = [dict(row._mapping) for row in closest]
     return [ItemWithDistance.model_validate(item) for item in items]
+
+
+@router.patch("/items/{id}", response_model=ItemPublic)
+async def update_item_handler(
+    id: int, database_session: DBSession, openai_embed: EmbeddingsClient, item_data: ItemUpdate
+) -> ItemPublic:
+    """Partially update an item and regenerate embeddings.
+
+    If no updatable fields are provided, the existing item is returned unchanged.
+    Embeddings are regenerated only if any of the text/value fields affecting semantic meaning changed.
+    """
+    item = (await database_session.scalars(select(Item).where(Item.id == id))).first()
+    if not item:
+        raise HTTPException(detail=f"Item with ID {id} not found.", status_code=404)
+
+    # Track whether something changed that should trigger re-embedding
+    meaningful_fields = ["type", "brand", "name", "description", "price", "owner"]
+    changed = False
+    for field in meaningful_fields:
+        new_value = getattr(item_data, field)
+        if new_value is not None and new_value != getattr(item, field):
+            setattr(item, field, new_value)
+            changed = True
+
+    await database_session.commit()
+    await database_session.refresh(item)
+
+    if changed:
+        try:
+            # Recreate formatted text consistent with create logic
+            text_for_embedding = (
+                f"Product: {item.name}. "
+                f"Type: {item.type}. "
+                f"Brand/Manufacturer: {item.brand}. "
+                f"Description: {item.description} "
+                f"Price: ${item.price:.2f}. "
+                f"Current Owner: {item.owner}."
+            )
+            embedding_3l = await compute_text_embedding(
+                text_for_embedding,
+                openai_embed.client,
+                embed_model="text-embedding-3-large",
+                embed_deployment=None,
+                embedding_dimensions=1024,
+            )
+            embedding_nomic = await compute_text_embedding(
+                text_for_embedding,
+                openai_embed.client,
+                embed_model="text-embedding-3-small",
+                embed_deployment=None,
+                embedding_dimensions=1536,
+            )
+            embedding_3l_array = np.array(embedding_3l, dtype=np.float32)
+            embedding_nomic_array = np.array(embedding_nomic, dtype=np.float32)
+            await database_session.execute(
+                text(
+                    """
+                UPDATE items
+                SET embedding_3l = :embedding_3l,
+                    embedding_nomic = :embedding_nomic
+                WHERE id = :item_id
+                """
+                ),
+                {
+                    "embedding_3l": embedding_3l_array.tolist(),
+                    "embedding_nomic": embedding_nomic_array.tolist(),
+                    "item_id": item.id,
+                },
+            )
+            await database_session.commit()
+        except Exception as e:  # pragma: no cover - protective logging
+            logging.warning(f"Failed to regenerate embeddings for item {item.id}: {e}")
+
+    return ItemPublic.model_validate(item.to_dict())
 
 
 @router.get("/search", response_model=list[ItemPublic])

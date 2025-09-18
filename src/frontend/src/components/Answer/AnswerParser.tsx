@@ -42,7 +42,7 @@ export function parseAnswerToHtml(answer: string, isStreaming: boolean, onCitati
 
             return renderToStaticMarkup(
                 <a className="supContainer" title={part}>
-                    <sup>{citationIndex}</sup>
+                    <sup>•</sup>
                 </a>
             );
         }

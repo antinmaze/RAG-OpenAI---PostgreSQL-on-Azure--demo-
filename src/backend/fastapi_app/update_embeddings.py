@@ -43,14 +43,14 @@ async def update_embeddings(in_seed_data=False):
                 # for each column in the JSON, store it in the same named attribute in the object
                 attrs = {key: value for key, value in seed_data_object.items()}
                 row = Item(**attrs)
-                embedding = await compute_text_embedding(
+                embedding_list = await compute_text_embedding(
                     row.to_str_for_embedding(),
                     openai_client=openai_embed_client,
                     embed_model=common_params.openai_embed_model,
                     embed_deployment=common_params.openai_embed_deployment,
                     embedding_dimensions=common_params.openai_embed_dimensions,
                 )
-                setattr(row, embedding_column, embedding)
+                setattr(row, embedding_column, embedding_list)
                 rows.append(row)
             # Write updated seed data to the file
             with open(os.path.join(current_dir, "seed_data.json"), "w") as f:
@@ -62,17 +62,14 @@ async def update_embeddings(in_seed_data=False):
             rows_to_update = (await session.scalars(select(Item))).all()
 
             for row_model in rows_to_update:
-                setattr(
-                    row_model,
-                    embedding_column,
-                    await compute_text_embedding(
-                        row_model.to_str_for_embedding(),
-                        openai_client=openai_embed_client,
-                        embed_model=common_params.openai_embed_model,
-                        embed_deployment=common_params.openai_embed_deployment,
-                        embedding_dimensions=common_params.openai_embed_dimensions,
-                    ),
+                embedding_list = await compute_text_embedding(
+                    row_model.to_str_for_embedding(),
+                    openai_client=openai_embed_client,
+                    embed_model=common_params.openai_embed_model,
+                    embed_deployment=common_params.openai_embed_deployment,
+                    embedding_dimensions=common_params.openai_embed_dimensions,
                 )
+                setattr(row_model, embedding_column, embedding_list)
             await session.commit()
 
 

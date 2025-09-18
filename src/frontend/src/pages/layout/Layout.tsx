@@ -9,7 +9,7 @@ const Layout = () => {
             <header className={styles.header} role={"banner"}>
                 <div className={styles.headerContainer}>
                     <Link to="/" className={styles.headerTitleContainer}>
-                        <h3 className={styles.headerTitle}>RAG on database</h3>
+                        <h3 className={styles.headerTitle}>Share More, Own Less</h3>
                     </Link>
                     <h4 className={styles.headerRightText}>OpenAI + PostgreSQL</h4>
                 </div>

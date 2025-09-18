@@ -80,6 +80,7 @@ export const Answer = ({
                                     <li key={rowId}>
                                         <h4>{citation.name}</h4>
                                         <p className={styles.referenceMetadata}>Brand: {citation.brand}</p>
+                                        <p className={styles.referenceMetadata}>Owner: {citation.owner}</p>
                                         <p className={styles.referenceMetadata}>Price: {citation.price}</p>
                                         <p>{citation.description}</p>
                                     </li>

@@ -29,6 +29,7 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.envFile": "",
+    "python.defaultInterpreterPath": "/usr/local/bin/python3",
     "files.exclude": {
         ".ruff_cache": true,
         ".pytest_cache": true,
@@ -36,5 +37,12 @@
         "htmlcov": true,
         ".mypy_cache": true,
         ".coverage": true
-    }
+    },
+
+    "github.copilot.advanced": {
+        "authProvider": "github"
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
+
 }

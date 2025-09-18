@@ -14,6 +14,7 @@ import { AnalysisPanel, AnalysisPanelTabs } from "../../components/AnalysisPanel
 import { SettingsButton } from "../../components/SettingsButton";
 import { ClearChatButton } from "../../components/ClearChatButton";
 import { VectorSettings } from "../../components/VectorSettings";
+import { AddItemModal } from "../../components/AddItemModal";
 
 const Chat = () => {
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
@@ -37,6 +38,7 @@ const Chat = () => {
     const [selectedAnswer, setSelectedAnswer] = useState<number>(0);
     const [answers, setAnswers] = useState<[user: string, response: RAGChatCompletion][]>([]);
     const [streamedAnswers, setStreamedAnswers] = useState<[user: string, response: RAGChatCompletion][]>([]);
+    const [isAddItemModalOpen, setIsAddItemModalOpen] = useState<boolean>(false);
 
     const handleAsyncRequest = async (question: string, answers: [string, RAGChatCompletion][], result: AsyncIterable<RAGChatCompletionDelta>) => {
         let answer = "";
@@ -190,9 +192,28 @@ const Chat = () => {
         setSelectedAnswer(index);
     };
 
+    const handleOpenAddItemModal = () => {
+        setIsAddItemModalOpen(true);
+    };
+
+    const handleCloseAddItemModal = () => {
+        setIsAddItemModalOpen(false);
+    };
+
+    const handleItemCreated = () => {
+        // Optionally refresh data or show a success message
+        console.log("Item created successfully!");
+    };
+
     return (
         <div className={styles.container}>
             <div className={styles.commandsContainer}>
+                <DefaultButton 
+                    className={styles.commandButton} 
+                    text="Add Item" 
+                    onClick={handleOpenAddItemModal} 
+                    disabled={isLoading}
+                />
                 <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
                 <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
             </div>
@@ -201,8 +222,8 @@ const Chat = () => {
                     {!lastQuestionRef.current ? (
                         <div className={styles.chatEmptyState}>
                             <SparkleFilled fontSize={"120px"} primaryFill={"rgba(115, 118, 225, 1)"} aria-hidden="true" aria-label="Chat logo" />
-                            <h1 className={styles.chatEmptyStateTitle}>Product chat</h1>
-                            <h2 className={styles.chatEmptyStateSubtitle}>Ask anything or try an example</h2>
+                            <h1 className={styles.chatEmptyStateTitle}>Sharing Items chat</h1>
+                            <h2 className={styles.chatEmptyStateSubtitle}>Looking for an item ? or try an example</h2>
                             <ExampleList onExampleClicked={onExampleClicked} />
                         </div>
                     ) : (
@@ -344,6 +365,12 @@ const Chat = () => {
                     />
                 </Panel>
             </div>
+            
+            <AddItemModal
+                isOpen={isAddItemModalOpen}
+                onClose={handleCloseAddItemModal}
+                onItemCreated={handleItemCreated}
+            />
         </div>
     );
 };

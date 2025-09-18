@@ -41,6 +41,26 @@ class ChatRequest(BaseModel):
     sessionState: Optional[Any] = None
 
 
+class ItemCreate(BaseModel):
+    type: str
+    brand: str
+    name: str
+    description: str
+    price: float
+    owner: str
+
+
+class ItemUpdate(BaseModel):
+    """Fields that can be updated for an Item. All optional for PATCH semantics."""
+
+    type: Optional[str] = None
+    brand: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    owner: Optional[str] = None
+
+
 class ItemPublic(BaseModel):
     id: int
     type: str
@@ -48,9 +68,17 @@ class ItemPublic(BaseModel):
     name: str
     description: str
     price: float
+    owner: str
 
     def to_str_for_rag(self):
-        return f"Name:{self.name} Description:{self.description} Price:{self.price} Brand:{self.brand} Type:{self.type}"
+        return (
+            f"Product Name: {self.name}\n"
+            f"Description: {self.description}\n"
+            f"Price: ${self.price}\n"
+            f"Brand/Manufacturer: {self.brand}\n"
+            f"Product Type: {self.type}\n"
+            f"Current Owner: {self.owner}"
+        )
 
 
 class ItemWithDistance(ItemPublic):

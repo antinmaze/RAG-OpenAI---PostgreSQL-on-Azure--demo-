@@ -53,7 +53,7 @@ async def create_postgres_engine(*, host, username, database, password, sslmode,
 
 async def create_postgres_engine_from_env(azure_credential=None) -> AsyncEngine:
     if azure_credential is None and os.environ["POSTGRES_HOST"].endswith(".database.azure.com"):
-        azure_credential = get_azure_credential()
+        azure_credential = await get_azure_credential()
 
     return await create_postgres_engine(
         host=os.environ["POSTGRES_HOST"],

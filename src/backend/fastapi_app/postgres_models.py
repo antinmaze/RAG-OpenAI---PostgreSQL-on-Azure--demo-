@@ -18,9 +18,10 @@ class Item(Base):
     name: Mapped[str] = mapped_column()
     description: Mapped[str] = mapped_column()
     price: Mapped[float] = mapped_column()
+    owner: Mapped[str] = mapped_column()
     # Embeddings for different models:
     embedding_3l: Mapped[Vector] = mapped_column(Vector(1024), nullable=True)  # text-embedding-3-large
-    embedding_nomic: Mapped[Vector] = mapped_column(Vector(768), nullable=True)  # nomic-embed-text
+    embedding_nomic: Mapped[Vector] = mapped_column(Vector(1536), nullable=True)  # text-embedding-3-small
 
     def to_dict(self, include_embedding: bool = False):
         model_dict = {column.name: getattr(self, column.name) for column in self.__table__.columns}
@@ -33,10 +34,20 @@ class Item(Base):
         return model_dict
 
     def to_str_for_rag(self):
-        return f"Name:{self.name} Description:{self.description} Price:{self.price} Brand:{self.brand} Type:{self.type}"
+        return (
+            f"Product Name: {self.name}\n"
+            f"Description: {self.description}\n"
+            f"Price: ${self.price}\n"
+            f"Brand/Manufacturer: {self.brand}\n"
+            f"Product Type: {self.type}\n"
+            f"Current Owner: {self.owner}"
+        )
 
     def to_str_for_embedding(self):
-        return f"Name: {self.name} Description: {self.description} Type: {self.type}"
+        return (
+            f"Product: {self.name}. Description: {self.description}. "
+            f"Category: {self.type}. Brand: {self.brand}. Current Owner: {self.owner}."
+        )
 
 
 """

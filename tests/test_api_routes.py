@@ -212,3 +212,35 @@ async def test_chat_non_json_422(test_client):
     assert response.headers["Content-Type"] == "application/json"
     assert response.headers["Content-Length"] == "82"
     assert b'{"detail":[{"type":"missing"' in response.content
+
+
+@pytest.mark.asyncio
+async def test_create_and_patch_item(test_client):
+    """Create a new item then patch it and ensure fields changed.
+
+    Embeddings are mocked; we just validate API behavior and that updated field is returned.
+    """
+    create_payload = {
+        "type": "Tent",
+        "brand": "TrailMax",
+        "name": "Summit Pro 2",
+        "description": "Lightweight alpine tent",
+        "price": 299.99,
+        "owner": "Warehouse A",
+    }
+    create_resp = test_client.post("/items", json=create_payload)
+    assert create_resp.status_code == 200
+    created = create_resp.json()
+    item_id = created["id"]
+    assert created["name"] == create_payload["name"]
+
+    # Patch description and price only
+    patch_payload = {"description": "Updated alpine expedition tent", "price": 319.5}
+    patch_resp = test_client.patch(f"/items/{item_id}", json=patch_payload)
+    assert patch_resp.status_code == 200
+    updated = patch_resp.json()
+    assert updated["description"] == patch_payload["description"]
+    assert updated["price"] == patch_payload["price"]
+    # Ensure unchanged fields persist
+    assert updated["name"] == create_payload["name"]
+    assert updated["owner"] == create_payload["owner"]
