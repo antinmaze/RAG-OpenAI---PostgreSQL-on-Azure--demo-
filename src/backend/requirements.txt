@@ -314,7 +314,7 @@ tiktoken==0.9.0
     # via opentelemetry-instrumentation-openai
 tqdm==4.67.1
     # via openai
-types-requests==2.32.4.20250611
+types-requests==2.32.4.20250913
     # via openai-agents
 typing-extensions==4.14.1
     # via
